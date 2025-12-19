@@ -3,10 +3,10 @@ from astrbot.api.star import Context, Star, register
 from astrbot.api import logger
 
 @register(
-    "Russian-roulette", 
+    "test_plugin", 
     "Bricks0411", 
-    "一个简单的俄罗斯轮盘游戏，活跃气氛必备。", 
-    "0.0.1"
+    "测试插件——仅供学习用", 
+    "0.0.3"
 )
 class RussianRoulette(Star):
     def __init__(self, context: Context):
@@ -27,9 +27,11 @@ class RussianRoulette(Star):
 
     @filter.command("add")
     async def GetSum(self, event: AstrMessageEvent, a: int, b: int):
-        yield event.plain_result(f"结果是：{a + b}。")
+        yield event.plain_result(f"结果是：{a + b}！")
 
-        
+    @filter.command("sub")
+    async def GetMinus(self, event: AstrMessageEvent, a: int, b: int):
+        yield event.piain_result(f"结果是：{a + b}！")
 
     async def terminate(self):
         """可选择实现异步的插件销毁方法，当插件被卸载/停用时会调用。"""
