@@ -26,20 +26,7 @@ class RussianRoulette(Star):
         yield event.plain_result(f"Hello, {user_name}, 你发了 {message_str}!") # 发送一条纯文本消息
 
     @filter.command("add")
-    async def GetSum(self, event: AstrMessageEvent):
-        args = event.message_str.strip().split()
-
-        if len(args) != 2:
-            yield event.plain_result("用法：/add <a> <b>")
-            return
-
-        try:
-            a = int(args[0])
-            b = int(args[1])
-        except ValueError:
-            yield event.plain_result("参数必须是整数")
-            return
-
+    async def GetSum(self, event: AstrMessageEvent, a: int, b: int):
         yield event.plain_result(f"结果是：{a + b}。")
 
         
