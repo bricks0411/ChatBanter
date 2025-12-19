@@ -1,6 +1,7 @@
 from astrbot.api.event import filter, AstrMessageEvent, MessageEventResult
 from astrbot.api.star import Context, Star, register
 from astrbot.api import logger
+from astrbot.api.message_components import At, Plain, Node
 
 @register(
     "test_plugin", 
@@ -32,6 +33,40 @@ class RussianRoulette(Star):
     @filter.command("sub")
     async def GetMinus(self, event: AstrMessageEvent, a: int, b: int):
         yield event.plain_result(f"结果是：{a - b}！")
+
+    @filter.event_message_type(filter.EventMessageType.GROUP_MESSAGE)
+    @filter.command("说")
+    async def Fake_say(self, event: AstrMessageEvent, a: int, b: int):
+        messages = event.get_messages()
+
+        if len(messages) < 2:
+            return
+        
+        if not isinstance(messages[0], At):
+            return
+        
+        if not isinstance(messages[1], Plain):
+            return
+        
+        text = messages[1].text.strip()
+        if not text.startswith("说"):
+            return
+        
+        content = text[1:].strip()
+        if not content:
+            yield event.plain_result("内容不能为空！")
+            return
+        
+        at_target = messages[0]
+
+        node = Node (
+            uin = at_target.qq,
+            name = at_target.name,
+            content = [Plain(content)]
+        )
+
+        yield event.chain_result([node])
+
 
     async def terminate(self):
         """可选择实现异步的插件销毁方法，当插件被卸载/停用时会调用。"""
