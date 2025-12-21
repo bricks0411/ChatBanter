@@ -37,14 +37,63 @@ class RussianRoulette(Star):
 
     async def initialize(self):
         """可选择实现异步的插件初始化方法，当实例化该插件类之后会自动调用该方法。"""
+        
+    # 伪造指令，基本格式为 @bot /说 @目标用户 [消息内容]
+    @filter.command("说")
+    async def FakeMessage(self, event: AstrMessageEvent):
+        if event.is_group():
+            messages = event.get_messages()
+            # 目标用户
+            target_at = None
+            # 消息内容
+            content_parts = []
+            # 解析消息，并判断消息合法性
+            for msg in messages:
+                if isinstance(msg, At):
+                    # 若艾特了不止一个人，那么直接报错
+                    if target_at is not None:
+                        yield event.plain_result("只能 @ 一个用户！")
+                        return
+                    # 若艾特的是机器人，则忽略掉
+                    if msg.qq == event.self_id:
+                        continue
+                    target_at = msg
+                elif isinstance(msg, Plain):
+                    content_parts.append(msg.text)
+            
+            if not target_at:
+                yield event.plain_result("请 @ 一个用户")
+                return
+            
+            content = "".join(content_parts).strip()
+            # 去掉开头的指令
+            content = content.replace("/说", "", 1).strip()
+            
+            if not content:
+                yield event.plain_result("内容不能为空！")
+                return
+            
+            node = Node (
+                uin = target_at.qq,
+                name = target_at.name,
+                content = [Plain(content)]
+            )
+            # 写入日志
+            logger.info(
+                f"[fake_say] by={event.get_sender_name()} "
+                f"target={target_at.qq} "
+                f"content={content}"
+            )
+            yield event.chain_result([node])
+        return
 
     # 注册指令的装饰器。触发关键字成功后，发送 任何包含关键字的语句 就会触发这个指令，并回复对应的内容
-    @filter.event_message_type(
+    @filter.event_message_type (
             filter.EventMessageType.GROUP_MESSAGE |
             filter.EventMessageType.PRIVATE_MESSAGE
     )
     async def handleMessages(self, event: AstrMessageEvent):
-        """这是一个 综合处理 群消息/私聊消息 的函数"""                         # 这是 handler 的描述，将会被解析方便用户了解插件内容。建议填写。
+        """这是一个 处理 早上好/晚安 的函数"""                           # 这是 handler 的描述，将会被解析方便用户了解插件内容。建议填写。
         # message_str = event.message_str                              # 用户发的纯文本消息字符串
         # message_chain = event.get_messages()                         # 用户所发的消息的消息链 # from astrbot.api.message_components import *
 
@@ -55,45 +104,7 @@ class RussianRoulette(Star):
             logger.info("空消息。")
             return
         
-        if event.group_id:
-            messages = event.get_messages()
-            # 判断是否至少满足 At + Plain
-            if len(messages) < 2:                               
-                return
-            
-            # 获取必要信息备用
-            at = messages[0]
-            plain = messages[1]
-            text_say = plain.text.strip()
-
-            # 判断是否为 At 消息
-            if not isinstance(at, At):                          
-                return
-            # 判断后续是否为 Plain 消息
-            if not isinstance(plain, Plain):                    
-                return
-            # 判断是否以“说”开头
-            if not text_say.startswith("说"):                           
-                return
-            
-            content = text_say[1:].strip()
-            if not content:
-                return
-            
-            # 构造伪造消息
-            node = Node ( 
-                uin = at.qq,
-                name = at.name,
-                content = [Plain(content)]
-            )
-            # 日志记录
-            logger.info(
-                f"[fake_say] fake | "
-                f"target={at.qq} | "
-                f"content={content}"
-            )
-            yield event.chain_result([node])
-        elif any(key in text for key in TRIGGERS_GOOD_MORNING):
+        if any(key in text for key in TRIGGERS_GOOD_MORNING):
             result = (
                 f"哼，早上好呀，{user_name}。\n"
                 "昨晚睡得还好吗？别、别误会，我才不是关心你，只是觉得你要是迟到会很丢脸而已。\n"
