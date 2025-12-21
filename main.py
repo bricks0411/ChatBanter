@@ -39,52 +39,52 @@ class RussianRoulette(Star):
         """可选择实现异步的插件初始化方法，当实例化该插件类之后会自动调用该方法。"""
 
     # 伪造指令，基本格式为 @bot /说 @目标用户 [消息内容]
+    @filter.event_message_type(filter.EventMessageType.GROUP_MESSAGE)
     @filter.command("说")
     async def FakeMessage(self, event: AstrMessageEvent):
-        if event.message_type == filter.EventMessageType.GROUP_MESSAGE:
-            messages = event.get_messages()
-            # 目标用户
-            target_at = None
-            # 消息内容
-            content_parts = []
-            # 解析消息，并判断消息合法性
-            for msg in messages:
-                if isinstance(msg, At):
-                    # 若艾特了不止一个人，那么直接报错
-                    if target_at is not None:
-                        yield event.plain_result("只能 @ 一个用户！")
-                        return
-                    # 若艾特的是机器人，则忽略掉
-                    if msg.qq == event.self_id:
-                        continue
-                    target_at = msg
-                elif isinstance(msg, Plain):
-                    content_parts.append(msg.text)
+        messages = event.get_messages()
+        # 目标用户
+        target_at = None
+        # 消息内容
+        content_parts = []
+        # 解析消息，并判断消息合法性
+        for msg in messages:
+            if isinstance(msg, At):
+                # 若艾特了不止一个人，那么直接报错
+                if target_at is not None:
+                    yield event.plain_result("只能 @ 一个用户！")
+                    return
+                # 若艾特的是机器人，则忽略掉
+                if msg.qq == event.self_id:
+                    continue
+                target_at = msg
+            elif isinstance(msg, Plain):
+                content_parts.append(msg.text)
             
-            if not target_at:
-                yield event.plain_result("请 @ 一个用户")
-                return
+        if not target_at:
+            yield event.plain_result("请 @ 一个用户")
+            return
+        
+        content = "".join(content_parts).strip()
+        # 去掉开头的指令
+        content = content.replace("/说", "", 1).strip()
             
-            content = "".join(content_parts).strip()
-            # 去掉开头的指令
-            content = content.replace("/说", "", 1).strip()
+        if not content:
+            yield event.plain_result("内容不能为空！")
+            return
             
-            if not content:
-                yield event.plain_result("内容不能为空！")
-                return
-            
-            node = Node (
-                uin = target_at.qq,
-                name = target_at.name,
-                content = [Plain(content)]
-            )
-            # 写入日志
-            logger.info(
-                f"[fake_say] by={event.get_sender_name()} "
-                f"target={target_at.qq} "
-                f"content={content}"
-            )
-            yield event.chain_result([node])
+        node = Node (
+            uin = target_at.qq,
+            name = target_at.name,
+            content = [Plain(content)]
+        )
+        # 写入日志
+        logger.info(
+            f"[fake_say] by={event.get_sender_name()} "
+            f"target={target_at.qq} "
+            f"content={content}"
+        )
+        yield event.chain_result([node])
         return
 
     # 注册指令的装饰器。触发关键字成功后，发送 任何包含关键字的语句 就会触发这个指令，并回复对应的内容
