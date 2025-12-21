@@ -19,7 +19,8 @@ TRIGGERS_GOOD_MORNING = {
     "Goodmorning",
     "good morning",
     "Good morning",
-    "早上好啊"
+    "早上好啊",
+    "早安"
 }
 
 # 插件信息注册
@@ -43,7 +44,7 @@ class RussianRoulette(Star):
             filter.EventMessageType.PRIVATE_MESSAGE
     )
     async def goodNight(self, event: AstrMessageEvent):
-        """这是一个 晚安 指令"""                         # 这是 handler 的描述，将会被解析方便用户了解插件内容。建议填写。
+        """这是一个 晚安/早上好 指令"""                         # 这是 handler 的描述，将会被解析方便用户了解插件内容。建议填写。
         # message_str = event.message_str                 # 用户发的纯文本消息字符串
         # message_chain = event.get_messages()            # 用户所发的消息的消息链 # from astrbot.api.message_components import *
 
@@ -54,69 +55,41 @@ class RussianRoulette(Star):
             logger.info("空消息。")
             return
         
-        if not any(key in text for key in TRIGGERS_GOOD_NIGHT):
+        if any(key in text for key in TRIGGERS_GOOD_NIGHT):
+            result = (
+                f"晚，晚安啦，{user_name}！\n"
+                "别误会，我可不是担心你，只是……今天看你还算努力。\n"
+                "早点睡，明天要是状态不好，可是会拖后腿的，知道吗？\n"
+                "……还有，别熬夜想些乱七八糟的事。\n"
+                "休息好，才、才不准做噩梦呢……\n"
+
+                "\n（小声）\n"
+                "……晚安。要是做梦的话，也给我做个像样点的。"
+            )
+            # 日志记录
+            logger.info(
+                f"[goodNight] trigger | "
+                f"user={user_name} | "
+                f"text={text}"
+            )
+            yield event.plain_result(result)                   # 发送一条纯文本消息
             return
+        elif any(key in text for key in TRIGGERS_GOOD_MORNING):
+            result = (
+                f"哼，早上好呀，{user_name}。\n"
+                "昨晚睡得还好吗？别、别误会，我才不是关心你，只是觉得你要是迟到会很丢脸而已。\n"
 
-        # logger.info(message_chain)                      # 日志输出
-        result = (
-            f"晚，晚安啦，{user_name}！\n"
-            "别误会，我可不是担心你，只是……今天看你还算努力。\n"
-            "早点睡，明天要是状态不好，可是会拖后腿的，知道吗？\n"
-            "……还有，别熬夜想些乱七八糟的事。\n"
-            "休息好，才、才不准做噩梦呢……\n"
-
-            "\n（小声）\n"
-            "……晚安。要是做梦的话，也给我做个像样点的。"
-        )
-
-        # 日志记录
-        logger.info(
-            f"[goodNight] trigger | "
-            f"user={user_name} | "
-            f"text={text}"
-        )
-
-
-        yield event.plain_result(result)                   # 发送一条纯文本消息
-
-    # 注册指令的装饰器。触发关键字成功后，发送 任何包含关键字的语句 就会触发这个指令，并回复对应的内容
-    @filter.event_message_type(
-            filter.EventMessageType.GROUP_MESSAGE |
-            filter.EventMessageType.PRIVATE_MESSAGE
-    )
-    async def goodMorning(self, event: AstrMessageEvent):
-        """这是一个 早上好 指令"""                         # 这是 handler 的描述，将会被解析方便用户了解插件内容。建议填写。
-        # message_str = event.message_str                 # 用户发的纯文本消息字符串
-        # message_chain = event.get_messages()            # 用户所发的消息的消息链 # from astrbot.api.message_components import *
-
-        user_name = event.get_sender_name()             # 发送消息的用户名称
-        text = event.message_str.strip()
-
-        if not text:
-            logger.info("空消息。")
+                "\n快去洗漱吃早饭，打起精神来。\n"
+                "今天也要好好表现，听到了没有？\n"
+            )
+            # 日志记录
+            logger.info(
+                f"[goodMorning] trigger | "
+                f"user={user_name} | "
+                f"text={text}"
+            )
+            yield event.plain_result(result)                    # 发送一条纯文本消息
             return
-        
-        if not any(key in text for key in TRIGGERS_GOOD_MORNING):
-            return
-
-        # logger.info(message_chain)                      # 日志输出
-        result = (
-            f"哼，早上好呀，{user_name}。\n"
-            "昨晚睡得还好吗？别、别误会，我才不是关心你，只是觉得你要是迟到会很丢脸而已。\n"
-
-            "\n快去洗漱吃早饭，打起精神来。\n"
-            "今天也要好好表现，听到了没有？\n"
-        )
-
-        # 日志记录
-        logger.info(
-            f"[goodMorning] trigger | "
-            f"user={user_name} | "
-            f"text={text}"
-        )
-
-
-        yield event.plain_result(result)                   # 发送一条纯文本消息
 
     # 注册指令装饰器
     @filter.command("add")
