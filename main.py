@@ -33,11 +33,10 @@ TRIGGERS_GOOD_MORNING = {
 
 # 插件信息注册
 @register(
-    name = "ChatBanter", 
-    author = "Bricks0411", 
-    description = "群聊娱乐小插件，包含迫害群友、特殊问候和今日运势等功能。", 
-    version = "0.0.5",
-    repository = "https://github.com/bricks0411/ChatBanter.git"
+    "astrbot_astrbot_plugin_chat_banter", 
+    "Bricks0411", 
+    "群聊娱乐小插件，包含迫害群友、特殊问候和今日运势等功能。", 
+    "v0.0.5",
 )
 
 class ChatBanter(Star):
