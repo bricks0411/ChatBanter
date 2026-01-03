@@ -1,8 +1,8 @@
-<center>
+<div align="center">
 
 # 群聊扫把星（ChatBanter）
 
-</center>
+</div>
 
 <p align="center">
   <img src="https://img.shields.io/badge/License-AGPL_3.0-blue.svg" alt="License: AGPL-3.0">
