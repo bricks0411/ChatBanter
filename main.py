@@ -47,6 +47,8 @@ class TestPlugin(Star):
             "test_plugin-main",
             "fortune_rank.json"
         )
+        # 初始化锁
+        self.rank_lock = asyncio.Lock()
         super().__init__(context)
 
     async def initialize(self):
@@ -195,7 +197,7 @@ class TestPlugin(Star):
 
         yield event.plain_result(result)
 
-        await self._update_rank(self, user_id, user_name, luck_value, today)
+        await self._update_rank(user_id, user_name, luck_value, today)
 
     @filter.command("运势排行", alias = {'今日运势排行', '运势排行榜'})
     async def FortuneRank(self, event: AstrMessageEvent):
@@ -287,7 +289,9 @@ class TestPlugin(Star):
 
     # 写入排行文件
     def _save_rank(self, data):
-        dir_path = os.path.dirname(self.rank_path)
+        dir_path = os.path.dirname(self.rank_file)
+        os.makedirs(dir_path, exist_ok=True)
+
         with tempfile.NamedTemporaryFile(
             mode="w",
             encoding="utf-8",
@@ -297,7 +301,8 @@ class TestPlugin(Star):
             json.dump(data, tmp, ensure_ascii=False, indent=2)
             tmp_path = tmp.name
 
-        os.replace(tmp_path, self.rank_path)
+        os.replace(tmp_path, self.rank_file)
+
 
     # 注册指令装饰器
     @filter.command("add")
