@@ -35,13 +35,14 @@ TRIGGERS_GOOD_MORNING = {
 @register(
     name = "ChatBanter", 
     author = "Bricks0411", 
-    desc = "群聊娱乐小插件，包含迫害群友、特殊问候和今日运势等功能。", 
+    description = "群聊娱乐小插件，包含迫害群友、特殊问候和今日运势等功能。", 
     version = "0.0.5",
-    repo = "https://github.com/bricks0411/ChatBanter.git"
+    repository = "https://github.com/bricks0411/ChatBanter.git"
 )
 
 class ChatBanter(Star):
     def __init__(self, context: Context):
+        super().__init__(context)
         self.rank_file = os.path.join(
             "data", 
             "plugins",
@@ -50,9 +51,19 @@ class ChatBanter(Star):
         )
         # 初始化锁
         self.rank_lock = asyncio.Lock()
+        self.config_file = os.path.join(
+            "data", 
+            "plugins", 
+            "ChatBanter", 
+            "config.json"
+        )
         # 初始化配置文件
         self.config = self.load_config()
-        super().__init__(context)
+
+    async def initialize(self):
+        """可选择实现异步的插件初始化方法，当实例化该插件类之后会自动调用该方法。"""
+        umo = self.unified_msg_origin
+        self.provider_id = await self.context.get_chat_provider_id(umo = umo)
 
     def load_config(self):
         """可选择实现同步的配置加载方法，当插件被加载/启用时会调用该方法。"""
@@ -60,8 +71,8 @@ class ChatBanter(Star):
             logger.info("[info] 配置文件不存在，创建默认配置文件。")
             dir_path = os.path.dirname(self.config_file)
             default_config = {
-                "fortune_prompt_for_LLM": {
-                    "今天是 {date}，有个名字叫 {user_name} 的人，Ta 今天的运势是 {luck_level}，幸运值是 {luck_value}\n",
+                "fortune_prompt_for_LLM": (
+                    "今天是 {date}，有个名字叫 {user_name} 的人，Ta 今天的运势是 {luck_level}，幸运值是 {luck_value}\n"
                     "请你锐评一下这个人今天的运势，并告诉 Ta 今天适合做什么事，不适合做什么事\n"
                     "在生成评价的过程中，严格按照下面的要求进行：\n"
                     "1.不能提起今天的幸运值数字，只能提起运势等级\n"
@@ -71,7 +82,7 @@ class ChatBanter(Star):
                     "5.你可以提及关于 Ta 今天可能过得怎么样，但一定要保证积极向上，即使 Ta 的运势不佳，也要给 Ta 一些鼓励和希望\n"
                     "6.评价中不允许包含AI助手/大模型等词语\n"
                     "请严格按照你的人格设定生成评价，回答需精炼简洁，尽量不超过70字\n"
-                }
+                )
             }
             os.makedirs(dir_path, exist_ok = True)
             with open(self.config_file, "w", encoding = "utf-8") as f:
@@ -81,9 +92,6 @@ class ChatBanter(Star):
         with open(self.config_file, "r", encoding = "utf-8") as f:
             logger.info("[info] 配置文件加载成功。")
             return json.load(f)
-
-    async def initialize(self):
-        """可选择实现异步的插件初始化方法，当实例化该插件类之后会自动调用该方法。"""
 
     # 伪造指令，基本格式为 @bot /说 @目标用户 [消息内容]
     @filter.event_message_type(filter.EventMessageType.GROUP_MESSAGE)
@@ -216,6 +224,7 @@ class ChatBanter(Star):
         template_prompt = self.config.get("fortune_prompt_for_LLM", "")
         if template_prompt:
             logger.info("[info] 运势提示词读取成功！使用自定义提示词。")
+            # 格式化提示词
             prompt = template_prompt.format(
                 date = today,
                 user_name = user_name,
@@ -242,7 +251,7 @@ class ChatBanter(Star):
         # result += f"\n📝 今日评价：{evaluation}"
 
         fortune_result = await self.context.llm_generate(
-            chat_provider = provider_id,
+            chat_provider = self.provider_id,
             prompt = prompt,
         )
 
@@ -369,7 +378,6 @@ class ChatBanter(Star):
             tmp_path = tmp.name
 
         os.replace(tmp_path, self.rank_file)
-
 
     # 注册指令装饰器
     @filter.command("add")
