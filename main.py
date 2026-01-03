@@ -39,7 +39,7 @@ TRIGGERS_GOOD_MORNING = {
     "0.0.3"
 )
 
-class TestPlugin(Star):
+class ChatBanter(Star):
     def __init__(self, context: Context):
         self.rank_file = os.path.join(
             "data", 

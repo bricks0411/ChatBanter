@@ -1,10 +1,26 @@
-# 群聊扫把星（test_plugin）
+<p align="center">
+  <img src="https://count.getloli.com/@Brick0411andhisbot?name=Brick0411andhisbot&theme=booru-lisu&padding=10&offset=0&align=center&scale=0.8&pixelated=1&darkmode=1" alt="Moe Counter">
+</p>
 
-一个基于 **AstrBot v4.x** 的群聊娱乐插件，用于学习与演示插件开发，包含群互动、每日运势、排行榜等功能。
+# 群聊扫把星（ChatBanter）
+
+一个基于 **AstrBot v4.x** 的群聊娱乐插件，支持**每日运势**、**迫害群友**和**特殊问候**等功能。
+
+感谢**ChatGPT**的技术指导，如果没有它的帮助，我可能连怎么写插件都很难学会。
+
+## 时间线
+
+程序编写于 $2025$ 年 $12$ 月 $20$ 日，总工期（包括学习、调教和编写）约为 $30$ 小时左右；
+
+第 $1$ 版 README 编写于 $2026$ 年 $1$ 月 $2$ 日；
+
+第 $2$ 版 README 编写于 $2026$ 年 $1$ 月 $3$ 日；
+
+第 $1$ 版项目上传于 $2026$ 年 $1$ 月 $3$ 日。
 
 ## 插件信息
 
-- **插件名**：test_plugin
+- **插件名**：ChatBanter
 - **作者**：Bricks0411
 - **版本**：0.0.3
 - **适配框架**：AstrBot v4.9.0
