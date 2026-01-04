@@ -36,27 +36,25 @@ TRIGGERS_GOOD_MORNING = {
 @register(
     "astrbot_plugin_chat_banter", 
     "Bricks0411", 
-    "群聊娱乐小插件，包含迫害群友、特殊问候和今日运势等功能。", 
-    "v0.0.6",
+    "群聊娱乐小插件，包含迫害群友、特殊问候和今日运势等功能，支持WebUI配置。", 
+    "v0.0.7",
 )
 
 class ChatBanter(Star):
     def __init__(self, context: Context):
         super().__init__(context)
-        self.rank_file = os.path.join(
-            "data", 
-            "plugins",
-            "test_plugin-main",
-            "fortune_rank.json"
-        )
-        # 初始化锁
-        self.rank_lock = asyncio.Lock()
+        # 配置文件路径
         self.config_file = os.path.join(
             "data", 
             "plugins", 
             "ChatBanter", 
             "config.json"
         )
+        # 排行榜文件路径
+        base_dir = os.path.dirname(self.config_file)
+        self.rank_file = os.path.join(base_dir, "fortune_rank.json")
+        # 初始化锁
+        self.rank_lock = asyncio.Lock()
         # 初始化配置文件
         self.config = self.load_config()
 
@@ -66,52 +64,80 @@ class ChatBanter(Star):
 
     def load_config(self) -> Dict[str, Any]:
         """加载配置文件"""
-        if not os.path.exists(self.config_file):
-            logger.info("[info] 配置文件不存在，创建默认配置文件。")
-            dir_path = os.path.dirname(self.config_file)
-            default_config = {
-                "fortune_prompt_for_LLM": (
-                    "今天是 {date}，有个名字叫 {user_name} 的人，Ta 今天的运势是 {luck_level}，幸运值是 {luck_value}\n"
-                    "请你锐评一下这个人今天的运势，并告诉 Ta 今天适合做什么事，不适合做什么事\n"
-                    "在生成评价的过程中，严格按照下面的要求进行：\n"
-                    "1.不能提起今天的幸运值数字，只能提起运势等级\n"
-                    "2.评价内容必须符合给出的运势等级，不能过于夸张或贬低\n"
-                    "3.如果在今天之内，这个人已经多次询问运势，请你在评价中提及这一点，并根据 Ta 的行为适当调整评价内容，允许表达不满，但需要注意分寸，不能让 Ta 感到被冒犯\n"
-                    "4.生成的评价不需要过于正式，允许带有调侃和幽默风格，同时可以适当使用表情符号、颜文字等\n"
-                    "5.你可以提及关于 Ta 今天可能过得怎么样，但一定要保证积极向上，即使 Ta 的运势不佳，也要给 Ta 一些鼓励和希望\n"
-                    "6.评价中不允许包含AI助手/大模型等词语\n"
-                    "请严格按照你的人格设定生成评价，回答需精炼简洁，尽量不超过70字\n"
-                ),
-                "good_morning_responses": [
+        DEFAULT_CONFIG: Dict[str, Any] = {
+            "features": {
+                "enable_fake_message": True,
+                "enable_greetings": True,
+                "enable_fortune": True,
+                "enable_rank": True
+            },
+            "fortune": {
+                "max_per_day": 0,
+                "prompt_for_LLM": {
+                    "max_per_day": 0,
+                    "prompt": [
+                        "今天是 {date}，有个名字叫 {user_name} 的人，Ta 今天的运势是 {luck_level}，幸运值是 {luck_value}\n",
+                        "请你锐评一下这个人今天的运势，并告诉 Ta 今天适合做什么事，不适合做什么事\n",
+                        "在生成评价的过程中，严格按照下面的要求进行：\n",
+                        "1.不能提起今天的幸运值数字，只能提起运势等级\n",
+                        "2.评价内容必须符合给出的运势等级，不能过于夸张或贬低\n",
+                        "3.如果在今天之内，这个人已经多次询问运势，请你在评价中提及这一点，并根据 Ta 的行为适当调整评价内容，允许表达不满，但需要注意分寸，不能让 Ta 感到被冒犯\n",
+                        "4.生成的评价不需要过于正式，允许带有调侃和幽默风格，同时可以适当使用表情符号、颜文字等\n",
+                        "5.你可以提及关于 Ta 今天可能过得怎么样，但一定要保证积极向上，即使 Ta 的运势不佳，也要给 Ta 一些鼓励和希望\n",
+                        "6.评价中不允许包含AI助手/大模型等词语\n",
+                        "请严格按照你的人格设定生成评价，回答需精炼简洁，尽量不超过70字\n"
+                    ]
+                },
+                "custom_good_list": [
+                    "摸鱼",
+                    "喝茶",
+                    "散步",
+                    "聊天",
+                    "听音乐"
+                ],
+                "custom_bad_list": [
+                    "加班",
+                    "写报告",
+                    "开会",
+                    "熬夜",
+                    "赶项目"
+                ],    
+            },
+            "greetings": {
+                "good_morning": [
                     "哼，早上好呀，{user_name}。\n昨晚睡得还好吗？别、别误会，我才不是关心你，只是觉得你要是迟到会很丢脸而已。\n\n快去洗漱吃早饭，打起精神来。\n今天也要好好表现，听到了没有？"
                 ],
-                "good_night_responses": [
+                "good_night": [
                     "晚，晚安啦，{user_name}！\n别误会，我可不是担心你，只是……今天看你还算努力。\n早点睡，明天要是状态不好，可是会拖后腿的，知道吗？\n……还有，别熬夜想些乱七八糟的事。\n好好休息，才、才不准做噩梦呢……\n\n（小声）\n……晚安。要是做梦的话，也给我做个像样点的。"
-                ],
-                "custom_actions": {
-                    "摸鱼": "摸鱼一时爽，一直摸鱼一直爽！",
-                    "水群": "水群可以，但别忘了正事哦~",
-                    "写BUG": "今天的BUG写得怎么样了？"
-                }
+                ]
+            },
+            "custom_actions": {
+                "摸鱼": "摸鱼一时爽，一直摸鱼一直爽！",
+                "水群": "水群可以，但别忘了正事哦~",
+                "写 BUG": "今天的BUG写得怎么样了？"
             }
-            os.makedirs(dir_path, exist_ok = True)
-            with open(self.config_file, "w", encoding = "utf-8") as f:
-                json.dump(default_config, f, ensure_ascii = False, indent = 2)
-            return default_config
+        }
         
+        # 确保配置文件目录存在
+        os.makedirs(os.path.dirname(self.config_file), exist_ok = True)
+        if not os.path.exists(self.config_file):
+            with open(self.config_file, "w", encoding = "utf-8") as f:
+                json.dump(DEFAULT_CONFIG, f, ensure_ascii = False, indent = 2)
+                logger.info("[info] 配置文件不存在，已创建默认配置文件。")
+            return DEFAULT_CONFIG.copy()
+        # 加载用户配置文件
         try:
-            with open(self.config_file, "r", encoding = "utf-8") as f:
-                config = json.load(f)
-            logger.info("[info] 配置文件加载成功。")
-            
-            # 确保配置文件有必要的字段
-            if "fortune_prompt_for_LLM" not in config:
-                config["fortune_prompt_for_LLM"] = default_config["fortune_prompt_for_LLM"]
-            
-            return config
+            with open(self.config_file, "r", encoding="utf-8") as f:
+                user_config = json.load(f)
+
+            logger.info("[info] 配置文件加载成功，正在校验结构。")
+            # 递归合并默认配置和用户配置
+            merged_config = self._deep_merge(DEFAULT_CONFIG, user_config)
+            return merged_config
+
         except Exception as e:
-            logger.error(f"[error] 加载配置文件失败: {e}")
-            return {}
+            logger.error(f"[error] 加载配置文件失败，使用默认配置: {e}")
+            return DEFAULT_CONFIG.copy()
 
     def save_config(self, new_config: Dict[str, Any]) -> bool:
         """保存配置文件"""
@@ -137,141 +163,53 @@ class ChatBanter(Star):
             logger.error(f"[error] 保存配置文件失败: {e}")
             return False
 
+    def get_fortune_prompt(self) -> str:
+        """获取用于生成运势评价的提示词模板"""
+        fortune = self.config.get("fortune", {})
+        # 获取 prompt_for_LLM 配置
+        pconf = fortune.get("prompt_for_LLM", {})
+
+        if not isinstance(pconf, dict):
+            return ""
+
+        prompt = pconf.get("prompt", [])        # 获取 prompt 字段
+        # 将列表拼接为字符串
+        if isinstance(prompt, list):
+            return "".join(prompt)
+        elif isinstance(prompt, str):
+            return prompt
+        return ""
+
     # ========== WebUI 配置相关方法 ==========
-    
-    async def get_config_schema(self) -> Dict[str, Any]:
-        """返回配置模式，用于WebUI显示配置表单"""
-        return {
-            "type": "object",
-            "properties": {
-                "fortune_prompt_for_LLM": {
-                    "type": "string",
-                    "title": "运势评价提示词",
-                    "description": "用于生成运势评价的提示词模板。可用变量：{date} {user_name} {luck_level} {luck_value}",
-                    "format": "textarea",
-                    "rows": 8,
-                    "default": self.config.get("fortune_prompt_for_LLM", "")
-                },
-                "good_morning_responses": {
-                    "type": "array",
-                    "title": "早安回复列表",
-                    "description": "触发早安问候时的回复列表，随机选择一条回复。可用变量：{user_name}",
-                    "items": {
-                        "type": "string",
-                        "format": "textarea",
-                        "rows": 3
-                    },
-                    "default": self.config.get("good_morning_responses", [])
-                },
-                "good_night_responses": {
-                    "type": "array",
-                    "title": "晚安回复列表",
-                    "description": "触发晚安问候时的回复列表，随机选择一条回复。可用变量：{user_name}",
-                    "items": {
-                        "type": "string",
-                        "format": "textarea",
-                        "rows": 3
-                    },
-                    "default": self.config.get("good_night_responses", [])
-                },
-                "enable_fake_message": {
-                    "type": "boolean",
-                    "title": "启用伪造消息功能",
-                    "description": "是否启用 /说 命令（伪造群成员消息）",
-                    "default": True
-                },
-                "enable_greetings": {
-                    "type": "boolean",
-                    "title": "启用问候功能",
-                    "description": "是否启用早安/晚安自动回复",
-                    "default": True
-                },
-                "enable_fortune": {
-                    "type": "boolean",
-                    "title": "启用运势功能",
-                    "description": "是否启用今日运势功能",
-                    "default": True
-                },
-                "enable_rank": {
-                    "type": "boolean",
-                    "title": "启用运势排行",
-                    "description": "是否启用运势排行榜功能",
-                    "default": True
-                },
-                "max_fortune_per_day": {
-                    "type": "integer",
-                    "title": "每日最大运势查询次数",
-                    "description": "每个用户每天最多可以查询运势的次数，0表示无限制",
-                    "minimum": 0,
-                    "default": 0
-                },
-                "custom_good_list": {
-                    "type": "array",
-                    "title": "自定义宜事项列表",
-                    "description": "自定义运势中宜的事项列表",
-                    "items": {"type": "string"},
-                    "default": self._good_list()
-                },
-                "custom_bad_list": {
-                    "type": "array",
-                    "title": "自定义忌事项列表",
-                    "description": "自定义运势中忌的事项列表",
-                    "items": {"type": "string"},
-                    "default": self._bad_list()
-                }
-            },
-            "required": ["fortune_prompt_for_LLM"],
-            "layout": [
-                {
-                    "type": "tab",
-                    "title": "核心设置",
-                    "items": [
-                        "fortune_prompt_for_LLM",
-                        "enable_fortune",
-                        "enable_rank",
-                        "max_fortune_per_day"
-                    ]
-                },
-                {
-                    "type": "tab",
-                    "title": "问候设置",
-                    "items": [
-                        "enable_greetings",
-                        "good_morning_responses",
-                        "good_night_responses"
-                    ]
-                },
-                {
-                    "type": "tab", 
-                    "title": "功能开关",
-                    "items": [
-                        "enable_fake_message",
-                        "enable_greetings", 
-                        "enable_fortune",
-                        "enable_rank"
-                    ]
-                },
-                {
-                    "type": "tab",
-                    "title": "自定义内容",
-                    "items": [
-                        "custom_good_list",
-                        "custom_bad_list"
-                    ]
-                }
-            ]
-        }
 
     async def get_config_data(self) -> Dict[str, Any]:
         """返回当前配置数据"""
         return self.config.copy()
 
+    def _deep_merge(self, base: dict, patch: dict) -> dict:
+        """
+        递归合并配置：
+        - patch 中的值会覆盖 base
+        - 只覆盖提供的字段，不破坏其他嵌套结构
+        """
+        result = base.copy()
+        for key, value in patch.items():
+            if (
+                key in result
+                and isinstance(result[key], dict)
+                and isinstance(value, dict)
+            ):
+                result[key] = self._deep_merge(result[key], value)
+            else:
+                result[key] = value
+        return result
+
+
     async def update_config(self, new_config: Dict[str, Any]) -> bool:
         """更新配置"""
         try:
             # 合并新旧配置，保留新配置中没有的旧配置
-            merged_config = self.config.copy()
-            merged_config.update(new_config)
+            merged_config = self._deep_merge(self.config, new_config)
             
             # 保存配置
             success = self.save_config(merged_config)
@@ -282,7 +220,7 @@ class ChatBanter(Star):
             logger.error(f"[error] 更新配置失败: {e}")
             return False
 
-    # ========== 业务逻辑方法 ==========
+    # ========== 主要的四个功能 ==========
 
     # 伪造指令，基本格式为 @bot /说 @目标用户 [消息内容]
     @filter.event_message_type(filter.EventMessageType.GROUP_MESSAGE)
@@ -290,7 +228,9 @@ class ChatBanter(Star):
     async def FakeMessage(self, event: AstrMessageEvent):
         """伪造群成员消息，仅供娱乐使用。"""
         # 检查功能是否启用
-        if not self.config.get("enable_fake_message", True):
+        features = self.config.get("features", {})
+        if not features.get("enable_fake_message", True):
+            logger.info("[info] 伪造消息功能未启用。")
             return
             
         messages = event.get_messages()
@@ -349,7 +289,9 @@ class ChatBanter(Star):
     async def SpecialGreeting(self, event: AstrMessageEvent):
         """这是一个 处理 早上好/晚安 的函数"""
         # 检查功能是否启用
-        if not self.config.get("enable_greetings", True):
+        features = self.config.get("features", {})
+        if not features.get("enable_greetings", True):
+            logger.info("[info] 问候功能未启用。")
             return
             
         user_name = event.get_sender_name()                            # 发送消息的用户名称
@@ -361,7 +303,8 @@ class ChatBanter(Star):
         
         # 判断触发关键字
         if any(key in text for key in TRIGGERS_GOOD_MORNING):
-            responses = self.config.get("good_morning_responses", [])
+            greetings = self.config.get("greetings", {})
+            responses = greetings.get("good_morning", [])
             if responses:
                 # 随机选择一条回复
                 template = random.choice(responses)
@@ -384,7 +327,8 @@ class ChatBanter(Star):
             yield event.plain_result(result)                    # 发送一条纯文本消息
             return
         elif any(key in text for key in TRIGGERS_GOOD_NIGHT):
-            responses = self.config.get("good_night_responses", [])
+            greetings = self.config.get("greetings", {})
+            responses = greetings.get("good_night", [])
             if responses:
                 # 随机选择一条回复
                 template = random.choice(responses)
@@ -414,14 +358,17 @@ class ChatBanter(Star):
     async def TodayFortune(self, event: AstrMessageEvent):
         """处理今日运势，群成员艾特后输入指令触发"""
         # 检查功能是否启用
-        if not self.config.get("enable_fortune", True):
+        features = self.config.get("features", {})
+        if not features.get("enable_fortune", True):
+            logger.info("[info] 今日运势功能未启用。")
             return
             
         user_id = str(event.get_sender_id())            # 获取用户 QQ 号
         user_name = event.get_sender_name()             # 获取用户名称
 
         # 检查每日查询次数限制
-        max_queries = self.config.get("max_fortune_per_day", 0)
+        fortune = self.config.get("fortune", {})
+        max_queries = fortune.get("max_per_day", 0)
         if max_queries > 0:
             today = datetime.date.today().isoformat()
             query_count = await self._get_user_query_count(user_id, today)
@@ -443,24 +390,26 @@ class ChatBanter(Star):
         luck_level = self._luck_level(luck_value)       # 返回幸运等级
         
         # 使用自定义列表或默认列表
-        good_list = self.config.get("custom_good_list", self._good_list())
-        bad_list = self.config.get("custom_bad_list", self._bad_list())
-        
+        fortune = self.config.get("fortune", {})
+        good_list = fortune.get("custom_good_list", [])
+        bad_list = fortune.get("custom_bad_list", [])
+
         good = random.choice(good_list) if good_list else "摸鱼"
         bad = random.choice(bad_list) if bad_list else "加班"
 
         # 获取 provider 标识符
         provider_identifier = await self._get_provider_identifier(event)
         
+        fortune_text = ""
+
         if not provider_identifier:
-            yield event.plain_result("❌ 抱歉，当前无法连接到 AI 服务，请稍后再试。")
-            return
-
-        # 生成运势评价
-        fortune_text = await self._generate_fortune_evaluation(
-            provider_identifier, today, user_name, luck_level, luck_value
-        )
-
+            fortune_text = "❌ 抱歉，当前无法连接到 AI 服务，请稍后再试。"
+        else:
+            # 生成运势评价
+            fortune_text = await self._generate_fortune_evaluation(
+                provider_identifier, today, user_name, luck_level, luck_value
+            )
+        
         # 额外逻辑：若为大吉，则诸事皆宜
         if luck_value >= 90:
             good = "诸事皆宜"
@@ -483,14 +432,17 @@ class ChatBanter(Star):
             await self._update_query_count(user_id, today)
         
         # 更新排行榜
-        if self.config.get("enable_rank", True):
+        features = self.config.get("features", {})
+        if features.get("enable_rank", True):
             await self._update_rank(user_id, user_name, luck_value, today)
 
     @filter.command("运势排行", alias = {'今日运势排行', '运势排行榜'})
     async def FortuneRank(self, event: AstrMessageEvent):
         """处理今日运势排行榜，群成员输入指令触发"""
         # 检查功能是否启用
-        if not self.config.get("enable_rank", True):
+        features = self.config.get("features", {})
+        if not features.get("enable_rank", True):
+            logger.info("[info] 运势排行榜功能未启用。")
             return
             
         # 获取日期
@@ -521,6 +473,34 @@ class ChatBanter(Star):
 
     # ========== 辅助方法 ==========
 
+    def _extract_provider_identifier(self, provider) -> Optional[str]:
+        """从 provider 对象中提取标识符"""
+        # 从 provider_settings 获取
+        if hasattr(provider, 'provider_settings'):
+            settings = provider.provider_settings
+            if isinstance(settings, dict):
+                for key in ['name', 'provider_name', 'id']:
+                    if key in settings and settings[key]:
+                        return str(settings[key])
+        
+        # 从 provider_config 获取
+        if hasattr(provider, 'provider_config'):
+            config = provider.provider_config
+            if isinstance(config, dict):
+                for key in ['name', 'provider_name', 'id']:
+                    if key in config and config[key]:
+                        return str(config[key])
+        
+        # 使用类名
+        import re
+        class_name = type(provider).__name__
+        # 去掉常见后缀
+        class_name = re.sub(r'(Provider|Official|Client)$', '', class_name)
+        # 驼峰转下划线小写
+        identifier = re.sub(r'(?<!^)(?=[A-Z])', '_', class_name).lower()
+        
+        return identifier
+    
     async def _get_provider_identifier(self, event) -> Optional[str]:
         """获取 provider 标识符"""
         try:
@@ -566,37 +546,10 @@ class ChatBanter(Star):
         
         return None
 
-    def _extract_provider_identifier(self, provider) -> Optional[str]:
-        """从 provider 对象中提取标识符"""
-        # 从 provider_settings 获取
-        if hasattr(provider, 'provider_settings'):
-            settings = provider.provider_settings
-            if isinstance(settings, dict):
-                for key in ['name', 'provider_name', 'id']:
-                    if key in settings and settings[key]:
-                        return str(settings[key])
-        
-        # 从 provider_config 获取
-        if hasattr(provider, 'provider_config'):
-            config = provider.provider_config
-            if isinstance(config, dict):
-                for key in ['name', 'provider_name', 'id']:
-                    if key in config and config[key]:
-                        return str(config[key])
-        
-        # 使用类名
-        import re
-        class_name = type(provider).__name__
-        # 去掉常见后缀
-        class_name = re.sub(r'(Provider|Official|Client)$', '', class_name)
-        # 驼峰转下划线小写
-        identifier = re.sub(r'(?<!^)(?=[A-Z])', '_', class_name).lower()
-        
-        return identifier
-
     async def _generate_fortune_evaluation(self, provider_id, date, user_name, luck_level, luck_value):
         """生成运势评价"""
-        template_prompt = self.config.get("fortune_prompt_for_LLM", "")
+        template_prompt = self.get_fortune_prompt()
+        # 使用默认提示词模板（如果配置中没有提供）
         if not template_prompt:
             template_prompt = (
                 "今天是 {date}，有个名字叫 {user_name} 的人，Ta 今天的运势是 {luck_level}，幸运值是 {luck_value}\n"
@@ -612,10 +565,10 @@ class ChatBanter(Star):
             )
         
         prompt = template_prompt.format(
-            date=date,
-            user_name=user_name,
-            luck_level=luck_level,
-            luck_value=luck_value
+            date        = date,
+            user_name   = user_name,
+            luck_level  = luck_level,
+            luck_value  = luck_value
         )
         
         try:
@@ -677,33 +630,7 @@ class ChatBanter(Star):
             return "平"
         else:
             return "凶"
-
-    # 列表：宜    
-    def _good_list(self):
-        return [
-            "摸鱼",
-            "水群",
-            "写 BUG",
-            "拖延",
-            "看番",
-            "打游戏",
-            "加训",
-            "发呆"
-        ]
-
-    # 列表：忌
-    def _bad_list(self):
-        return [
-            "写文档",
-            "改需求",
-            "修 BUG",
-            "加班",
-            "早起",
-            "开会",
-            "摆烂",
-            "调戏 Asuka"
-        ]
-
+    
     # 排行榜更新：添加锁机制，保证写操作满足原子性
     async def _update_rank(self, user_id, user_name, luck, today):
         async with self.rank_lock:
